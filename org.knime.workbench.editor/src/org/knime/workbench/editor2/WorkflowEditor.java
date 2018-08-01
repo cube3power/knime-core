@@ -287,15 +287,18 @@ public class WorkflowEditor extends GraphicalEditor implements
     /** Id as defined in plugin.xml. */
     public static final String ID = "org.knime.workbench.editor.WorkflowEditor";
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(WorkflowEditor.class);
+    /** The editor mode which a newly opened worklow is in **/
+    public static final WorkflowEditorMode INITIAL_EDITOR_MODE = WorkflowEditorMode.NODE_EDIT;
 
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowEditor.class);
+
+    /** The root clipboard name **/
     public static final String CLIPBOARD_ROOT_NAME = "clipboard";
 
     /**
      * The static clipboard for copy/cut/paste.
      */
-    private static ClipboardObject clipboard;
+    private static ClipboardObject CLIPBOARD;
 
     private static final Color BG_COLOR_WRITE_LOCK =
         new Color(null, 235, 235, 235);
@@ -325,6 +328,8 @@ public class WorkflowEditor extends GraphicalEditor implements
     private ZoomWheelListener m_zoomWheelListener;
 
     private NodeSupplantDragListener m_nodeSupplantDragListener;
+
+    private WorkflowEditorMode m_editorMode;
 
     /** path to the workflow directory (that contains the workflow.knime file). */
     private URI m_fileResource;
@@ -388,6 +393,8 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         // initialize actions (can't be in init(), as setInput is called before)
         createActions();
+
+        m_editorMode = INITIAL_EDITOR_MODE;
     }
 
     /**
@@ -403,17 +410,32 @@ public class WorkflowEditor extends GraphicalEditor implements
      * @return the clipboard for this editor
      */
     public ClipboardObject getClipboardContent() {
-        return clipboard;
+        return CLIPBOARD;
     }
 
     /**
-     * Sets the clipboard content for this editor.
+     * Sets the clipboard content; note that this sets the class variable object and so applies to all instances of
+     * this class within the JVM.
      *
      * @param content the content to set into the clipboard
-     *
      */
     public void setClipboardContent(final ClipboardObject content) {
-        clipboard = content;
+        CLIPBOARD = content;
+    }
+
+    /**
+     * @return the current edit mode of this editor.
+     */
+    public WorkflowEditorMode getEditorMode() {
+        return m_editorMode;
+    }
+
+    /**
+     * @param wme the new editor mode; this setting does not trigger any sort of listener notification, so it should
+     *            therefore be done in a code lifecycle prior to any dependent code querying the WorkflowEditor.
+     */
+    public void setEditorMode(final WorkflowEditorMode wme) {
+        m_editorMode = wme;
     }
 
     /**

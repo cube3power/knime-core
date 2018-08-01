@@ -46,6 +46,7 @@
 package org.knime.workbench.editor2.figures;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.DelegatingLayout;
@@ -61,14 +62,16 @@ import org.eclipse.draw2d.ToolbarLayout;
 import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.ConvenienceMethods;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NativeNodeContainer.LoopStatus;
 import org.knime.core.node.workflow.NodeContainerState;
@@ -79,6 +82,10 @@ import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.editor2.EditorModeParticipant;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.WorkflowEditorMode;
+import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
 import org.knime.workbench.editor2.figures.ProgressFigure.ProgressMode;
 
@@ -99,7 +106,7 @@ import org.knime.workbench.editor2.figures.ProgressFigure.ProgressMode;
  * @author Florian Georg, University of Konstanz
  * @author Christoph Sieb, University of Konstanz
  */
-public class NodeContainerFigure extends RectangleFigure {
+public class NodeContainerFigure extends RectangleFigure implements EditorModeParticipant {
 
     // default plugin ID to get icons/images from
     private static final String EDITOR_PLUGIN_ID = KNIMEEditorPlugin.PLUGIN_ID;
@@ -154,6 +161,12 @@ public class NodeContainerFigure extends RectangleFigure {
     /** State: Node not configured. */
     public static final int STATE_NOT_CONFIGURED = 0;
 
+    /** dummy font for status figure. Needs a "small" font... */
+    private static final Font NODE_FONT = FontStore.INSTANCE.getDefaultFont(3);
+
+    private static final Color HEADING_CONTAINER_FOREGROUND = ColorConstants.black;
+
+
     /** content pane, contains the port visuals and the icon. */
     private final SymbolFigure m_symbolFigure;
 
@@ -193,8 +206,7 @@ public class NodeContainerFigure extends RectangleFigure {
 
     private boolean m_showFlowVarPorts;
 
-    /** dummy font for status figure. Needs a "small" font... */
-    private static final Font NODE_FONT = FontStore.INSTANCE.getDefaultFont(3);
+    private WorkflowEditorMode m_currentEditorMode = WorkflowEditor.INITIAL_EDITOR_MODE;
 
     /**
      * Creates a new node figure.
@@ -299,6 +311,9 @@ public class NodeContainerFigure extends RectangleFigure {
         return m_statusFigure;
     }
 
+    /**
+     * @return the dimension of the status bar figure
+     */
     public static Dimension getStatusBarDimension() {
         return StatusFigure.getDimension();
     }
@@ -326,23 +341,31 @@ public class NodeContainerFigure extends RectangleFigure {
      */
     public void setType(final NodeType type) {
         m_symbolFigure.setType(type);
-
     }
 
+    /**
+     * @param jobExecIcon the icon associated with job execution
+     */
     public void setJobExecutorIcon(final Image jobExecIcon) {
         m_jobExec = jobExecIcon;
         m_symbolFigure.refreshJobManagerIcon();
     }
 
+    /**
+     * @param icon the icon associated with metanode links
+     */
     public void setMetaNodeLinkIcon(final Image icon) {
-        if (!ConvenienceMethods.areEqual(m_metaNodeLinkIcon, icon)) {
+        if (!Objects.equals(m_metaNodeLinkIcon, icon)) {
             m_metaNodeLinkIcon = icon;
             m_symbolFigure.refreshMetaNodeLinkIcon();
         }
     }
 
+    /**
+     * @param icon the icon associated with metanode locks
+     */
     public void setMetaNodeLockIcon(final Image icon) {
-        if (!ConvenienceMethods.areEqual(m_metaNodeLockIcon, icon)) {
+        if (!Objects.equals(m_metaNodeLockIcon, icon)) {
             m_metaNodeLockIcon = icon;
             m_symbolFigure.refreshMetaNodeLockIcon();
         }
@@ -387,7 +410,7 @@ public class NodeContainerFigure extends RectangleFigure {
                     return d;
                 }
             };
-            l.setForegroundColor(ColorConstants.black);
+            l.setForegroundColor(HEADING_CONTAINER_FOREGROUND);
             l.setFont(boldFont);
             m_headingContainer.add(l);
             Dimension size = l.getPreferredSize();
@@ -398,8 +421,7 @@ public class NodeContainerFigure extends RectangleFigure {
             Dimension size = child.getPreferredSize();
             int offset = (width - size.width) / 2;
 
-            child.setBounds(new Rectangle(offset, height, size.width,
-                    size.height));
+            child.setBounds(new Rectangle(offset, height, size.width, size.height));
             height += size.height;
         }
 
@@ -691,6 +713,14 @@ public class NodeContainerFigure extends RectangleFigure {
      */
     @Override
     public Color getBackgroundColor() {
+        final WorkflowEditor we =
+                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+        final boolean renderEnabled = (we == null) || WorkflowEditorMode.NODE_EDIT.equals(we.getEditorMode());
+
+        if (!renderEnabled) {
+            return AnnotationEditPart.convertToGrayscale(m_backgroundColor);
+        }
+
         return m_backgroundColor;
     }
 
@@ -734,8 +764,7 @@ public class NodeContainerFigure extends RectangleFigure {
         super.paint(graphics);
         if (m_loopStatusFigure != null) {
             final Rectangle r = getSymbolFigure().getBounds();
-            graphics.drawImage(m_loopStatusFigure,
-                    new Point(r.x + 24, r.y + 32));
+            graphics.drawImage(m_loopStatusFigure, new Point(r.x + 24, r.y + 32));
         }
     }
 
@@ -744,8 +773,8 @@ public class NodeContainerFigure extends RectangleFigure {
      */
     @Override
     public void paintFigure(final Graphics graphics) {
-        graphics.setBackgroundColor(getBackgroundColor());
-        super.paintFigure(graphics);
+      graphics.setBackgroundColor(getBackgroundColor());
+      super.paintFigure(graphics);
     }
 
     /**
@@ -826,6 +855,8 @@ public class NodeContainerFigure extends RectangleFigure {
 
         private Label m_nodeLockLabel;
 
+        private NodeType m_nodeType;
+
         /**
          * Creates a new figure containing the symbol. That is the background
          * icon (depending on the type of the node) and the node's icon. Also
@@ -866,6 +897,9 @@ public class NodeContainerFigure extends RectangleFigure {
             setConstraint(m_backgroundIcon, new RelativeLocator(this, 0.5, 0.5));
         }
 
+        /**
+         * Refreshes the job manager icon.
+         */
         protected void refreshJobManagerIcon() {
             // do we have to remove it?
             if (m_jobExecutorLabel != null && m_jobExec == null) {
@@ -884,6 +918,9 @@ public class NodeContainerFigure extends RectangleFigure {
             }
         }
 
+        /**
+         * Refreshes the metanode link icon.
+         */
         protected void refreshMetaNodeLinkIcon() {
             // do we have to remove it?
             if (m_metaNodeLinkedLabel != null && m_metaNodeLinkIcon == null) {
@@ -902,6 +939,9 @@ public class NodeContainerFigure extends RectangleFigure {
             }
         }
 
+        /**
+         * Refreshes the metanode lock icon.
+         */
         protected void refreshMetaNodeLockIcon() {
             // do we have to remove it?
             if (m_metaNodeLockLabel != null && m_metaNodeLockIcon == null) {
@@ -942,52 +982,48 @@ public class NodeContainerFigure extends RectangleFigure {
             }
         }
 
-
         /**
-         * This determines the background image according to the "type" of the
-         * node as stored in the repository model.
+         * This determines the background image according to the "type" of the node as stored in the repository model.
          *
-         * @param type The Type
          * @return Image that should be uses as background for this node
          */
-        private Image getBackgroundForType(final NodeType type) {
-
+        private Image getBackgroundImage() {
             String str = null;
-            if (type == null) {
+            if (m_nodeType == null) {
                 str = BACKGROUND_UNKNOWN;
-            } else if (type.equals(NodeType.Source)) {
+            } else if (m_nodeType.equals(NodeType.Source)) {
                 str = BACKGROUND_SOURCE;
-            } else if (type.equals(NodeType.Sink)) {
+            } else if (m_nodeType.equals(NodeType.Sink)) {
                 str = BACKGROUND_SINK;
-            } else if (type.equals(NodeType.Manipulator)) {
+            } else if (m_nodeType.equals(NodeType.Manipulator)) {
                 str = BACKGROUND_MANIPULATOR;
-            } else if (type.equals(NodeType.Learner)) {
+            } else if (m_nodeType.equals(NodeType.Learner)) {
                 str = BACKGROUND_LEARNER;
-            } else if (type.equals(NodeType.Predictor)) {
+            } else if (m_nodeType.equals(NodeType.Predictor)) {
                 str = BACKGROUND_PREDICTOR;
-            } else if (type.equals(NodeType.Meta)) {
+            } else if (m_nodeType.equals(NodeType.Meta)) {
                 str = BACKGROUND_META;
-            } else if (type.equals(NodeType.Other)) {
+            } else if (m_nodeType.equals(NodeType.Other)) {
                 str = BACKGROUND_OTHER;
-            } else if (type.equals(NodeType.Missing)) {
+            } else if (m_nodeType.equals(NodeType.Missing)) {
                 str = BACKGROUND_MISSING;
-            } else if (type.equals(NodeType.Visualizer)) {
+            } else if (m_nodeType.equals(NodeType.Visualizer)) {
                 str = BACKGROUND_VIEWER;
-            } else if (type.equals(NodeType.LoopStart)) {
+            } else if (m_nodeType.equals(NodeType.LoopStart)) {
                 str = BACKGROUND_LOOPER_START;
-            } else if (type.equals(NodeType.LoopEnd)) {
+            } else if (m_nodeType.equals(NodeType.LoopEnd)) {
                 str = BACKGROUND_LOOPER_END;
-            } else if (type.equals(NodeType.ScopeStart)) {
+            } else if (m_nodeType.equals(NodeType.ScopeStart)) {
                 str = BACKGROUND_SCOPE_START;
-            } else if (type.equals(NodeType.ScopeEnd)) {
+            } else if (m_nodeType.equals(NodeType.ScopeEnd)) {
                 str = BACKGROUND_SCOPE_END;
-            } else if (type.equals(NodeType.QuickForm)) {
+            } else if (m_nodeType.equals(NodeType.QuickForm)) {
                 str = BACKGROUND_QUICKFORM;
-            } else if (type.equals(NodeType.Subnode)) {
+            } else if (m_nodeType.equals(NodeType.Subnode)) {
                 str = BACKGROUND_SUBNODE;
-            } else if (type.equals(NodeType.VirtualIn)) {
+            } else if (m_nodeType.equals(NodeType.VirtualIn)) {
                 str = BACKGROUND_VIRTUAL_IN;
-            } else if (type.equals(NodeType.VirtualOut)) {
+            } else if (m_nodeType.equals(NodeType.VirtualOut)) {
                 str = BACKGROUND_VIRTUAL_OUT;
             } else {
                 str = BACKGROUND_UNKNOWN;
@@ -1004,7 +1040,8 @@ public class NodeContainerFigure extends RectangleFigure {
          * @see org.knime.workbench.repository.model.NodeTemplate
          */
         void setType(final NodeType type) {
-            m_backgroundIcon.setIcon(getBackgroundForType(type));
+            m_nodeType = type;
+            updateFigure();
         }
 
         /**
@@ -1015,6 +1052,20 @@ public class NodeContainerFigure extends RectangleFigure {
         void setIcon(final Image icon) {
             m_iconFigure.setIcon(icon);
             m_iconFigure.revalidate();
+        }
+
+        void updateFigure() {
+            Image i = getBackgroundImage();
+
+            if (!WorkflowEditorMode.NODE_EDIT.equals(m_currentEditorMode)) {
+                i = new Image(Display.getDefault(), i, SWT.IMAGE_GRAY);
+
+                final ImageData id = i.getImageData();
+                id.alpha = 96;
+                i = new Image(Display.getDefault(), id);
+            }
+
+            setBackgroundIcon(i);
         }
 
         void setBackgroundIcon(final Image icon) {
@@ -1086,6 +1137,7 @@ public class NodeContainerFigure extends RectangleFigure {
          *
          * @param message the message to set
          */
+        @SuppressWarnings("unchecked")
         public void setWarning(final String message) {
 
             // as the warning sign should always be before the error sign
@@ -1233,7 +1285,7 @@ public class NodeContainerFigure extends RectangleFigure {
      */
     private class InfoWarnErrorFigure extends Figure {
 
-        private final Label m_label;
+        private final Label m_figureLabel;
 
         /**
          * Creates a new bottom figure.
@@ -1244,9 +1296,9 @@ public class NodeContainerFigure extends RectangleFigure {
             layout.setMinorAlignment(OrderedLayout.ALIGN_CENTER);
             layout.setStretchMinorAxis(true);
             setLayoutManager(layout);
-            m_label = new Label();
+            m_figureLabel = new Label();
 
-            add(m_label);
+            add(m_figureLabel);
             setOpaque(false);
         }
 
@@ -1256,7 +1308,7 @@ public class NodeContainerFigure extends RectangleFigure {
          * @param icon The icon (traffic light) to set
          */
         public void setIcon(final Image icon) {
-            m_label.setIcon(icon);
+            m_figureLabel.setIcon(icon);
             revalidate();
         }
 
@@ -1266,7 +1318,7 @@ public class NodeContainerFigure extends RectangleFigure {
          * @param message The status message for the tool tip
          */
         private void setToolTip(final String message, final int type) {
-            m_label.setToolTip(new WarnErrorToolTip(message, type));
+            m_figureLabel.setToolTip(new WarnErrorToolTip(message, type));
             revalidate();
         }
 
@@ -1276,7 +1328,7 @@ public class NodeContainerFigure extends RectangleFigure {
         @Override
         public Dimension getPreferredSize(final int wHint, final int hHint) {
             return super.getPreferredSize(NodeContainerFigure.this
-                    .getSymbolFigure().getPreferredSize().width, m_label
+                    .getSymbolFigure().getPreferredSize().width, m_figureLabel
                     .getPreferredSize().height);
         }
 
@@ -1402,4 +1454,24 @@ public class NodeContainerFigure extends RectangleFigure {
         return new Point(xDiff, yDiff);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @SuppressWarnings("unchecked")  // generic casting...
+    @Override
+    public void workflowEditorModeWasSet(final WorkflowEditorMode newMode) {
+        m_currentEditorMode = newMode;
+
+        m_symbolFigure.updateFigure();
+
+        final Color c =
+            WorkflowEditorMode.NODE_EDIT.equals(newMode) ? HEADING_CONTAINER_FOREGROUND : ColorConstants.gray;
+        for (IFigure child : (List<IFigure>)m_headingContainer.getChildren()) {
+            if (child instanceof Label) {
+                child.setForegroundColor(c);
+            }
+        }
+
+        repaint();
+    }
 }

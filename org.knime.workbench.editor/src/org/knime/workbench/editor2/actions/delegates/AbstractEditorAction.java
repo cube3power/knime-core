@@ -68,22 +68,18 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  *
  * @author Florian Georg, University of Konstanz
  */
-public abstract class AbstractEditorAction implements IEditorActionDelegate,
-        NodeStateChangeListener {
+public abstract class AbstractEditorAction implements IEditorActionDelegate, NodeStateChangeListener {
     private WorkflowEditor m_editor;
 
     private AbstractNodeAction m_decoratedAction;
 
-    private final List<NodeContainerEditPart> m_currentSelection
-        = new ArrayList<NodeContainerEditPart>();
+    private final List<NodeContainerEditPart> m_currentSelection = new ArrayList<NodeContainerEditPart>();
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public final void setActiveEditor(final IAction action,
-            final IEditorPart targetEditor) {
-
+    public final void setActiveEditor(final IAction action, final IEditorPart targetEditor) {
         if (targetEditor instanceof WorkflowEditor) {
 
             m_editor = (WorkflowEditor)targetEditor;
@@ -109,6 +105,8 @@ public abstract class AbstractEditorAction implements IEditorActionDelegate,
     @Override
     public final void run(final IAction action) {
         if (m_decoratedAction != null) {
+            actionWillRun(action);
+
             m_decoratedAction.run();
         }
     }
@@ -117,15 +115,13 @@ public abstract class AbstractEditorAction implements IEditorActionDelegate,
      * {@inheritDoc}
      */
     @Override
-    public final void selectionChanged(final IAction action,
-            final ISelection selection) {
+    public final void selectionChanged(final IAction action, final ISelection selection) {
         if (m_decoratedAction != null) {
             m_decoratedAction.dispose();
             m_decoratedAction = null;
             // and unregister from old selection
             for (NodeContainerEditPart cont : m_currentSelection) {
-                cont.getNodeContainer().removeNodeStateChangeListener(
-                        this);
+                cont.getNodeContainer().removeNodeStateChangeListener(this);
             }
             m_currentSelection.clear();
         }
@@ -138,11 +134,9 @@ public abstract class AbstractEditorAction implements IEditorActionDelegate,
                 for (Iterator<?> itr = sel.iterator(); itr.hasNext();) {
                     Object o = itr.next();
                     if (o instanceof NodeContainerEditPart) {
-                        NodeContainerEditPart ncEP
-                            = (NodeContainerEditPart)o;
+                        NodeContainerEditPart ncEP = (NodeContainerEditPart)o;
                         m_currentSelection.add(ncEP);
-                        ncEP.getNodeContainer().addNodeStateChangeListener(
-                                this);
+                        ncEP.getNodeContainer().addNodeStateChangeListener(this);
                     }
                 }
             }
@@ -199,7 +193,14 @@ public abstract class AbstractEditorAction implements IEditorActionDelegate,
      * @param editor the knime editor
      * @return Decorated action
      */
-    protected abstract AbstractNodeAction createAction(
-            final WorkflowEditor editor);
+    protected abstract AbstractNodeAction createAction(final WorkflowEditor editor);
+
+    /**
+     * This will be called just prior to the decorated action having its <code>run()</code> method invoked. This
+     * implementation does nothing but subclasses may override if interested.
+     *
+     * @param action the IAction implementor instance being passed to this class' <code>run(IAction)</code> method.
+     */
+    protected void actionWillRun(final IAction action) { }
 
 }

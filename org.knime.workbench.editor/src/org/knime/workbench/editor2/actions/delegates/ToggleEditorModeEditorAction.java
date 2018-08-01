@@ -40,71 +40,32 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
+ * -------------------------------------------------------------------
  *
  * History
- *   09.06.2008 (Fabian Dill): created
+ *   29.06.2012 (Peter Ohl): created
  */
-package org.knime.workbench.editor2.figures;
+package org.knime.workbench.editor2.actions.delegates;
 
-import org.eclipse.swt.graphics.Image;
-import org.knime.core.node.NodeFactory.NodeType;
-import org.knime.core.node.workflow.NodeContainerState;
-import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.workbench.KNIMEEditorPlugin;
-import org.knime.workbench.core.util.ImageRepository;
-
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.actions.AbstractNodeAction;
+import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
 
 /**
- * @author Fabian Dill, University of Konstanz
+ * Editor action for toggling the edit mode of the current editor between Annotation Edit and Node Edit.
+ *
+ * @author loki der quaeler
  */
-public class SubworkflowFigure extends NodeContainerFigure {
+public class ToggleEditorModeEditorAction extends AbstractEditorAction {
+    /** The id for usage with IToolBarManager.find(String) **/
+    public static final String ACTION_ID = "org.knime.workbench.editor.actions.toggleEditorMode";
 
-    // load images
-    private static final Image IDLE_STATE = ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID,
-            "icons/meta/meta_idle2.png");
-
-    private static final Image EXECUTING_STATE = ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID,
-            "icons/meta/meta_executing5.png");
-
-    private static final Image EXECUTED_STATE = ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID,
-            "icons/meta/meta_executed.png");
-
-    /**
-     * Everything like the {@link NodeContainerFigure} but without the status
-     * traffic light, state is reflected by icons on the node.
-     *
-     * @param progress progress figure for super constructor
-     */
-    public SubworkflowFigure(final ProgressFigure progress) {
-        super(progress);
-        remove(getStatusFigure());
-        ((NodeContainerFigure.SymbolFigure)getSymbolFigure()).setType(NodeType.Meta);
-    }
 
     /**
      * {@inheritDoc}
-     * Only reflects three different states: idle, executing, executed.
      */
     @Override
-    public void setStateFromNC(final NodeContainerUI nc) {
-        NodeContainerState state = nc.getNodeContainerState();
-        Image image;
-        if (state.isExecuted()) {
-            image = EXECUTED_STATE;
-        } else if (state.isExecutionInProgress()) {
-            image = EXECUTING_STATE;
-        } else {
-            image = IDLE_STATE;
-        }
-        ((NodeContainerFigure.SymbolFigure)getSymbolFigure()).setIcon(image);
-        revalidate();
+    protected AbstractNodeAction createAction(final WorkflowEditor editor) {
+        return new ToggleEditorModeAction(editor);
     }
-
-    /**
-     * {@inheritDoc}
-     * Ignores it - since the type is fixed.
-     */
-    @Override
-    public void setType(final NodeType type) { }
 }

@@ -105,10 +105,10 @@ public final class ImageRepository {
 
         /** Add icon in the form of a plus sign. */
         AddPlus("icons/add_plus.png"),
-        /** edit icon when cursor moves over annotations. */
+        /** edit icon when cursor moves over annotations - TODO this is unused. */
         AnnotationEditHover("icons/anno_edit.png"),
-        /** move icon when cursor moves over annotation top left corner. */
-        AnnotationMoveHover("icons/anno_move.png"),
+        /** icon when cursor is over annotation top left corner in node edit mode, showing the ability to change mode */
+        AnnotationEditModeHover("icons/anno_edit_pencil.png"),
         /** Small icon for export wizards. */
         ExportSmall("icons/knime_export16.png"),
         /** Big icon for export wizards. */
