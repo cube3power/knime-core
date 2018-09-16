@@ -2299,16 +2299,17 @@ public class WorkflowEditor extends GraphicalEditor implements
             //do nothing if it hasn't been loaded entirely, yet
             return;
         }
-        WorkflowFigure workflowFigure = ((WorkflowRootEditPart)getViewer().getRootEditPart().getContents()).getFigure();
-        StringBuilder sb = new StringBuilder();
+
+        final ViewportPinningGraphicalViewer viewer = (ViewportPinningGraphicalViewer)getGraphicalViewer();
+        final StringBuilder sb = new StringBuilder();
         if (isTempRemoteWorkflowEditor()) {
             URI origRemoteLocation = m_origRemoteLocation;
             WorkflowEditor parentEditor = m_parentEditor;
-            while (origRemoteLocation == null && parentEditor != null) {
+            while ((origRemoteLocation == null) && (parentEditor != null)) {
                 origRemoteLocation = parentEditor.m_origRemoteLocation;
                 parentEditor = parentEditor.m_parentEditor;
             }
-            String uriString = URIUtil.toDecodedString(origRemoteLocation);
+            final String uriString = URIUtil.toDecodedString(origRemoteLocation);
             sb.append("  This is a temporary copy of \"" + uriString + "\".");
             if (!(uriString.startsWith("knime://EXAMPLE") || uriString.startsWith("file:/"))) {
                 //"Save"-action only allowed for server-workflows, but not temporary workflows from the example-server nor an external file
@@ -2323,13 +2324,14 @@ public class WorkflowEditor extends GraphicalEditor implements
                 sb.append(
                     "\n  Use \"Save As...\" to save a permanent copy of the workflow to your local workspace, or a mounted KNIME Server.");
             }
-            workflowFigure.setWarningMessage(sb.toString());
+            viewer.setWarningMessage(sb.toString());
         } else if (getWorkflowManagerUI() instanceof AsyncWorkflowManagerUI) {
             // if the underlying workflow manager is a AsyncWorkflowManagerUI instance
             assert m_refresher != null;
-            if(m_fileResource != null && m_parentEditor == null) {
+            if ((m_fileResource != null) && (m_parentEditor == null)) {
                 //root workflow
-                sb.append("This is a view on the remote job running on KNIME Server (" + m_fileResource.getAuthority() + ").");
+                sb.append("This is a view on the remote job running on KNIME Server (" + m_fileResource.getAuthority()
+                    + ").");
             } else {
                 //metanode editor
                 sb.append("This is a view on a metanode of a remote job running on KNIME Server.");
@@ -2343,29 +2345,26 @@ public class WorkflowEditor extends GraphicalEditor implements
                     sb.append("\nJob locked for edits. Enable edit operations in the preferences.");
                 }
             }
-            workflowFigure.setInfoMessage(sb.toString());
+            viewer.setInfoMessage(sb.toString());
 
             if (!m_refresher.isConnected() && m_refresher.isJobEditEnabled()) {
                 sb.setLength(0);
-                sb.append(
-                    "Server not responding, either the server is overloaded or the connection is lost. Job will not "
-		        + " refresh and no changes can be made until connection is restored.");
-                workflowFigure.setErrorMessage(sb.toString());
+                sb.append("Server not responding, either the server is overloaded or the connection is lost. Job "
+                    + "will not refresh and no changes can be made until connection is restored.");
+                viewer.setErrorMessage(sb.toString());
             } else {
-                workflowFigure.setErrorMessage(null);
+                viewer.setErrorMessage(null);
             }
 
             if (getWorkflowManagerUI().isInWizardExecution()) {
-                workflowFigure.setWarningMessage("Job started by WebPortal. Edit operations are not allowed. "
+                viewer.setWarningMessage("Job started by WebPortal. Edit operations are not allowed. "
                     + "Nodes following the currently active wrapped metanode (WebPortal page) are not executed.");
             }
         } else {
-            workflowFigure.setInfoMessage(null);
-            workflowFigure.setWarningMessage(null);
-            workflowFigure.setErrorMessage(null);
+            viewer.clearAllMessages();
         }
-        List<IEditorPart> subEditors = getSubEditors();
-        for (IEditorPart ep : subEditors) {
+
+        for (final IEditorPart ep : getSubEditors()) {
             if (ep instanceof WorkflowEditor) {
                 ((WorkflowEditor)ep).updateWorkflowMessages();
             }
@@ -2378,11 +2377,7 @@ public class WorkflowEditor extends GraphicalEditor implements
      * @param message the info message to display
      */
     private void showInfoMessage(final String header, final String message) {
-        // inform the user
-
-        MessageBox mb =
-                new MessageBox(this.getSite().getShell(), SWT.ICON_INFORMATION
-                        | SWT.OK);
+        MessageBox mb = new MessageBox(this.getSite().getShell(), SWT.ICON_INFORMATION | SWT.OK);
         mb.setText(header);
         mb.setMessage(message);
         mb.open();
