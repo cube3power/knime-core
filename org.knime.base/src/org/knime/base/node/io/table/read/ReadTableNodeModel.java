@@ -259,7 +259,16 @@ public class ReadTableNodeModel extends NodeModel {
                 };
                 in = bcs;
             }
-            return DataContainer.readFromStream(in);
+            try {
+                return DataContainer.readFromStream(in);
+            } catch (IOException e) {
+                final String message = e.getMessage();
+                if (message.equals("No entry data.bin in file")) {
+                    throw new InvalidSettingsException(
+                        "Cannot read file! This is mostly due to the fact that it is not in KNIME Table format as written by the KNIME Table Writer node.");
+                }
+                throw e;
+            }
         } finally {
             exec.setProgress(1.0);
         }
@@ -298,6 +307,10 @@ public class ReadTableNodeModel extends NodeModel {
             if (message == null) {
                 message = "Unable to read spec from file, "
                     + "no detailed message available.";
+            }
+            if (message.equals("No entry data.bin in file")) {
+                throw new InvalidSettingsException(
+                    "Cannot read file! This is mostly due to the fact that it is not in KNIME Table format as written by the KNIME Table Writer node.");
             }
             throw new InvalidSettingsException(message);
 
