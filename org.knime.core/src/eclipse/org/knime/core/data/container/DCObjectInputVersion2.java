@@ -145,6 +145,19 @@ final class DCObjectInputVersion2 implements KNIMEStreamConstants {
         return FileStoreKey.load(m_dataIn);
     }
 
+    /** Reads an array of FileStore keys
+     * @return An array of FileStore keys.
+     * @throws IOException If IO problems occur.
+     */
+    FileStoreKey[] readFileStoreKeys() throws IOException {
+        int numReferencedFileStoreKeys = m_dataIn.readInt();
+        FileStoreKey[] referencedFileStoreKeys = new FileStoreKey[numReferencedFileStoreKeys];
+        for(int fsIdx = 0; fsIdx < numReferencedFileStoreKeys; fsIdx++) {
+            referencedFileStoreKeys[fsIdx] = FileStoreKey.load(m_dataIn);
+        }
+        return referencedFileStoreKeys;
+    }
+
     /** Reads a blob address from the stream.
      * @return as read from the stream.
      * @throws IOException If that fails. */
