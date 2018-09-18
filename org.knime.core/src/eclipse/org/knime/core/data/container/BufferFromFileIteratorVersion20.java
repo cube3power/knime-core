@@ -375,7 +375,7 @@ final class BufferFromFileIteratorVersion20 extends FromFileIterator {
 
         /** Reads a data cell from the argument stream. Does not perform exception
          * handling, nor stream blocking.
-         * @since 3.7 adds support for multiple FileStores in FileStoreCells
+         * @since 3.7
          * @param inStream To read from.
          * @return the data cell being read
          * @throws IOException If exceptions occur.

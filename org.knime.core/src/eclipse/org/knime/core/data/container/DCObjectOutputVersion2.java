@@ -122,7 +122,9 @@ class DCObjectOutputVersion2 implements KNIMEStreamConstants, AutoCloseable {
         key.save(m_dataOut);
     }
 
-    /** Saves an array of file store keys
+    /**
+     * Saves an array of file store keys
+     * @since 3.7
      * @param fileStoreKeys
      * @throws IOException
      */
