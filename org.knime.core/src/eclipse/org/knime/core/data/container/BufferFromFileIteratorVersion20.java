@@ -327,6 +327,10 @@ final class BufferFromFileIteratorVersion20 extends FromFileIterator {
          * @throws IOException If exceptions occur.
          */
         DataCell readDataCell(final DCObjectInputVersion2 inStream) throws IOException {
+            if(m_tableFormatReader.getReadVersion() > 10) {
+                // starting with table version 11 FileStoreCells support multiple FileStores
+                return readDataCellVersion2(inStream);
+            }
             inStream.setCurrentClassLoader(null);
             byte identifier = inStream.readControlByte();
             if (identifier == BYTE_TYPE_MISSING) {
@@ -362,9 +366,59 @@ final class BufferFromFileIteratorVersion20 extends FromFileIterator {
 
             if (fileStoreKey != null) {
                 FileStoreCell fsCell = (FileStoreCell)result;
-                FileStoreUtil.retrieveFileStoreHandlerFrom(fsCell,
-                        fileStoreKey, m_tableFormatReader.getFileStoreHandlerRepository());
+                FileStoreUtil.retrieveFileStoreHandlersFrom(fsCell,
+                        new FileStoreKey[] {fileStoreKey}, m_tableFormatReader.getFileStoreHandlerRepository());
             }
+
+            return result;
+        }
+
+        /** Reads a data cell from the argument stream. Does not perform exception
+         * handling, nor stream blocking.
+         * @since 3.7 adds support for multiple FileStores in FileStoreCells
+         * @param inStream To read from.
+         * @return the data cell being read
+         * @throws IOException If exceptions occur.
+         */
+        DataCell readDataCellVersion2(final DCObjectInputVersion2 inStream) throws IOException {
+            inStream.setCurrentClassLoader(null);
+            byte identifier = inStream.readControlByte();
+            if (identifier == BYTE_TYPE_MISSING) {
+                return DataType.getMissingCell();
+            }
+            final boolean isSerialized = identifier == BYTE_TYPE_SERIALIZATION;
+            if (isSerialized) {
+                identifier = inStream.readControlByte();
+            }
+            CellClassInfo type = m_tableFormatReader.getTypeForChar(identifier);
+            Class<? extends DataCell> cellClass = type.getCellClass();
+            boolean isFileStore = FileStoreCell.class.isAssignableFrom(cellClass);
+            final FileStoreKey[] fileStoreKeys;
+            if (isFileStore) {
+                fileStoreKeys = inStream.readFileStoreKeys();
+            } else {
+                fileStoreKeys = null;
+            }
+            boolean isBlob = BlobDataCell.class.isAssignableFrom(cellClass);
+            final DataCell result;
+            if (isBlob) {
+                result = m_tableFormatReader.createBlobWrapperCell(inStream.readBlobAddress(), type);
+            } else if (isSerialized) {
+                ClassLoader cellLoader = cellClass.getClassLoader();
+                inStream.setCurrentClassLoader(cellLoader);
+                result = inStream.readDataCellPerJavaSerialization();
+            } else {
+                DataCellSerializer<? extends DataCell> serializer =
+                    type.getSerializer();
+                assert serializer != null;
+                result = inStream.readDataCellPerKNIMESerializer(serializer);
+            }
+
+            if (fileStoreKeys != null) {
+                FileStoreCell fsCell = (FileStoreCell)result;
+                FileStoreUtil.retrieveFileStoreHandlersFrom(fsCell, fileStoreKeys, m_tableFormatReader.getFileStoreHandlerRepository());
+            }
+
             return result;
         }
     } // class DataCellStreamReader
