@@ -67,8 +67,8 @@ public abstract class FileStoreCell extends DataCell implements FlushCallback {
 
     /**
      * @since 3.7
-     *  */
-    protected FileStoreCell(final FileStore... fileStores) {
+     */
+    protected FileStoreCell(final FileStore[] fileStores) {
         if(fileStores.length < 1) {
             throw new IllegalArgumentException("FileStoreCell needs at least one fileStore");
         }
@@ -77,7 +77,7 @@ public abstract class FileStoreCell extends DataCell implements FlushCallback {
     }
 
     protected FileStoreCell(final FileStore fileStore) {
-        m_fileStoreProxies = new FileStoreProxy[] { new FileStoreProxy(fileStore) };
+       this(new FileStore[] { fileStore });
     }
 
     /** Used when read from persisted stream.
